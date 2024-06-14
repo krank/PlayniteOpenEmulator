@@ -1,0 +1,7 @@
+﻿Id: OpenEmulator_031c26f0-0358-4503-aaf1-f8af851212bf
+Name: Open Emulator 
+Author: Krank
+Version: 0.1
+Module: OpenEmulator.dll
+Type: GenericPlugin
+Icon: icon.png
