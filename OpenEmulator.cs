@@ -28,28 +28,58 @@ namespace OpenEmulator
       };
     }
 
-    public void Test(GetGameMenuItemsArgs args)
-    {
-
-    }
-
     public override IEnumerable<GameMenuItem> GetGameMenuItems(GetGameMenuItemsArgs args)
     {
-      if (args.Games.Count == 1)
+      /* TODO:
+       - Make a hashset of the exes instead of the emulators, or in addition to
+       - Display "Launch Ryujinx [ryujinx.exe]", one per exe in emulator installation folder
+       - Make subcategories IF there are multiple exes for the emulator
+      */
+
+      ICollection<Emulator> emulators = GetEmulatorsOfGames(args.Games);
+
+      foreach (Emulator emulator in emulators)
       {
         yield return new GameMenuItem
         {
-          Description = "Open emulator",
+          Description = "Open " + emulator.Name,
 
-          Action = (args2) =>
+          Action = (gameArgs) =>
           {
-            // use args.Games to get list of games attached to the menu source
-            Console.WriteLine("Invoked from game menu item!");
-            logger.Info("Games!");
+            logger.Info("Launch " + emulator.Name);
+            // emulator.BuiltInConfigId
+            // emulator.AllProfiles.First().
+            PlayniteApi.
           }
         };
       }
-      // else yield return null;
+    }
+
+    private ICollection<Emulator> GetEmulatorsOfGames(List<Game> games)
+    {
+      HashSet<System.Guid> emulatorGuids = new HashSet<Guid>();
+
+      foreach (Game game in games)
+      {
+        foreach (GameAction action in game.GameActions)
+        {
+          if (action.Type != GameActionType.Emulator) break;
+          emulatorGuids.Add(action.EmulatorId);
+        }
+      }
+
+      HashSet<Emulator> emulators = new HashSet<Emulator>();
+
+      foreach (Emulator emulator in PlayniteApi.Database.Emulators)
+      {
+        if (emulatorGuids.Contains(emulator.Id))
+        {
+          emulators.Add(emulator);
+          emulatorGuids.Remove(emulator.Id);
+        }
+      }
+
+      return emulators;
     }
 
 
