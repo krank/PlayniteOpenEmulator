@@ -25,4 +25,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="Localization\*.xaml" CopyToOutputDirectory="Always"/>
+  </ItemGroup>
 </Project>
