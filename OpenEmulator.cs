@@ -4,6 +4,7 @@ using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -32,7 +33,7 @@ namespace OpenEmulator
 
     public override IEnumerable<GameMenuItem> GetGameMenuItems(GetGameMenuItemsArgs args)
     {
-      string OpenString = ResourceProvider.GetString("LOCOpenEmulatorOpen");
+      string openString = ResourceProvider.GetString("LOCOpenEmulatorOpen");
 
       ICollection<Emulator> emulators = GetEmulatorsOfGames(args.Games);
 
@@ -44,14 +45,20 @@ namespace OpenEmulator
         {
           yield return new GameMenuItem
           {
-            MenuSection = exeFiles.Length > 1 ? $"{OpenString} {emulator.Name}" : "",
+            MenuSection = exeFiles.Length > 1 ? $"{openString} {emulator.Name}" : "",
 
             Description = exeFiles.Length > 1 ? Path.GetFileName(exeFile) :
-               $"{OpenString} {emulator.Name} [{Path.GetFileName(exeFile)}]",
+               $"{openString} {emulator.Name} [{Path.GetFileName(exeFile)}]",
 
             Action = (gameArgs) =>
             {
-              Process.Start(exeFile);
+              ProcessStartInfo processInfo = new ProcessStartInfo
+              {
+                WorkingDirectory = emulator.InstallDir,
+                FileName = exeFile
+              };
+
+              Process.Start(processInfo);
             }
           };
         }
