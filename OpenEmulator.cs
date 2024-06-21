@@ -22,6 +22,24 @@ namespace OpenEmulator
 
     public override Guid Id { get; } = Guid.Parse("031c26f0-0358-4503-aaf1-f8af851212bf");
 
+    class EmulatorRecord : IEquatable<EmulatorRecord>
+    {
+      public string Name { get; set; }
+      public string InstallDir { get; set; }
+
+      public bool Equals(EmulatorRecord other)
+      {
+        return other != null &&
+          Name == other.Name &&
+          InstallDir == other.InstallDir;
+      }
+
+      public override int GetHashCode()
+      {
+        return HashCode.Combine(Name, InstallDir);
+      }
+    }
+
     public OpenEmulator(IPlayniteAPI api) : base(api)
     {
       settings = new OpenEmulatorSettingsViewModel(this);
@@ -35,26 +53,27 @@ namespace OpenEmulator
     {
       string openString = ResourceProvider.GetString("LOCOpenEmulatorOpen");
 
-      ICollection<Emulator> emulators = GetEmulatorsOfGames(args.Games);
+      ICollection<EmulatorRecord> emulators = GetEmulatorsOfGames(args.Games);
 
-      foreach (Emulator emulator in emulators)
+      foreach (EmulatorRecord emulatorRecord in emulators)
       {
-        string[] exeFiles = Directory.GetFiles(emulator.InstallDir, "*.exe");
+        string[] exeFiles = Directory.GetFiles(emulatorRecord.InstallDir, "*.exe");
+
 
         foreach (string exeFile in exeFiles)
         {
           yield return new GameMenuItem
           {
-            MenuSection = exeFiles.Length > 1 ? $"{openString} {emulator.Name}" : "",
+            MenuSection = exeFiles.Length > 1 ? $"{openString} {emulatorRecord.Name}" : "",
 
             Description = exeFiles.Length > 1 ? Path.GetFileName(exeFile) :
-               $"{openString} {emulator.Name} [{Path.GetFileName(exeFile)}]",
+               $"{openString} {emulatorRecord.Name} [{Path.GetFileName(exeFile)}]",
 
             Action = (gameArgs) =>
             {
               ProcessStartInfo processInfo = new ProcessStartInfo
               {
-                WorkingDirectory = emulator.InstallDir,
+                WorkingDirectory = emulatorRecord.InstallDir,
                 FileName = exeFile
               };
 
@@ -65,27 +84,36 @@ namespace OpenEmulator
       }
     }
 
-    private ICollection<Emulator> GetEmulatorsOfGames(List<Game> games)
+    private ICollection<EmulatorRecord> GetEmulatorsOfGames(List<Game> games)
     {
-      HashSet<System.Guid> emulatorGuids = new HashSet<Guid>();
 
+      // Get all emulators for quick (?) lookup)
+      Dictionary<System.Guid, Emulator> playniteEmulators = new Dictionary<Guid, Emulator>();
+
+      foreach (Emulator emulator in PlayniteApi.Database.Emulators)
+      {
+        playniteEmulators.Add(emulator.Id, emulator);
+      }
+
+
+      HashSet<EmulatorRecord> emulators = new HashSet<EmulatorRecord>();
+
+      // Go through all games & actions
       foreach (Game game in games)
       {
         foreach (GameAction action in game.GameActions)
         {
           if (action.Type != GameActionType.Emulator) break;
-          emulatorGuids.Add(action.EmulatorId);
-        }
-      }
+          Emulator emulator = playniteEmulators[action.EmulatorId];
 
-      HashSet<Emulator> emulators = new HashSet<Emulator>();
+          // Create record & add it
+          EmulatorRecord record = new EmulatorRecord()
+          {
+            Name = emulator.Name,
+            InstallDir = PlayniteApi.ExpandGameVariables(game, emulator.InstallDir)
+          };
 
-      foreach (Emulator emulator in PlayniteApi.Database.Emulators)
-      {
-        if (emulatorGuids.Contains(emulator.Id))
-        {
-          emulators.Add(emulator);
-          emulatorGuids.Remove(emulator.Id);
+          emulators.Add(record);
         }
       }
 
